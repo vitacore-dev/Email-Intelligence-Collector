@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # Backend API Service (Development)
+  backend:
+    build:
+      context: ./backend
+      target: builder
+    container_name: eic-backend-dev
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Use SQLite for development
+      - DATABASE_URL=sqlite:///./data/eic_dev.sqlite
+      # External Services
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - REDIS_URL=redis://redis:6379/0
+      # Application Settings
+      - DEBUG=True
+      - SECRET_KEY=dev-secret-key-not-for-production
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./backend:/app
+      - ./backend/logs:/app/logs
+      - ./backend/data:/app/data
+    depends_on:
+      - redis
+      - elasticsearch
+    networks:
+      - eic-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend Service (Development)
+  frontend:
+    build:
+      context: ./frontend
+      target: builder
+    container_name: eic-frontend-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - eic-network
+    command: pnpm run dev --host
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: eic-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - eic-network
+
+  # Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: eic-elasticsearch-dev
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    networks:
+      - eic-network
+
+networks:
+  eic-network:
+    driver: bridge

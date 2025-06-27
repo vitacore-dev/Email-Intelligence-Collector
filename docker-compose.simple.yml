@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # Backend API Service (Simplified)
+  backend:
+    build:
+      context: ./backend
+      target: production
+    container_name: eic-backend-simple
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Use SQLite for simplicity
+      - DATABASE_URL=sqlite:///./data/eic_simple.sqlite
+      - DEBUG=True
+      - SECRET_KEY=simple-dev-key-not-for-production
+      - LOG_LEVEL=INFO
+      # Disable external services for simple setup
+      - ELASTICSEARCH_URL=
+      - REDIS_URL=
+    volumes:
+      - ./backend/logs:/app/logs
+      - ./backend/data:/app/data
+    networks:
+      - eic-simple
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  eic-simple:
+    driver: bridge

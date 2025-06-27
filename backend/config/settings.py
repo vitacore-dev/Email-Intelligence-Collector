@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     
     # База данных
-    DATABASE_URL: str = "postgresql://postgres:password@localhost:5432/eic_db"
+    DATABASE_URL: str = "sqlite:///./eic_db.sqlite"
     
     # Elasticsearch
     ELASTICSEARCH_URL: str = "http://localhost:9200"
