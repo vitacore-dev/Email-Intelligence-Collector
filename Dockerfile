@@ -27,9 +27,8 @@ COPY backend/requirements.txt /app/backend_requirements.txt
 RUN pip install --upgrade pip && \
     pip install -r /app/backend_requirements.txt
 
-# Устанавливаем дополнительные зависимости для веб-скрапера (опционально)
-COPY requirements_webscraper.txt /app/requirements_webscraper.txt
-RUN pip install -r /app/requirements_webscraper.txt || echo "Некоторые NLP зависимости не установлены"
+# Дополнительные зависимости для поисковых систем
+RUN pip install lxml beautifulsoup4 fake-useragent tldextract url-normalize
 
 # Загружаем модель spaCy (если возможно)
 RUN python -m spacy download en_core_web_sm || echo "spaCy модель не загружена"

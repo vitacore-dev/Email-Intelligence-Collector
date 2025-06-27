@@ -29,9 +29,21 @@ class SearchHistoryItem(BaseModel):
     results_found: int
     created_at: datetime
 
+class SearchEngineStats(BaseModel):
+    name: Optional[str] = None
+    total_results: int = 0
+    usage_count: int = 0
+    success_rate: float = 0.0
+    avg_response_time: float = 0.0
+    is_active: bool = True
+    last_used: Optional[datetime] = None
+    rate_limit: Optional[int] = None
+
 class StatsResponse(BaseModel):
     total_profiles: int
     total_searches: int
+    search_engine_results: Optional[int] = 0
+    search_engine_stats: Optional[Dict[str, SearchEngineStats]] = None
     recent_searches: List[Dict[str, Any]]
 
 class ErrorResponse(BaseModel):

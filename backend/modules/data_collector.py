@@ -16,6 +16,7 @@ from .social_collectors import (
 )
 from .web_scraper import WebScraper
 from .email_validator import EmailValidator
+from .search_engines import SearchEngineManager, SearchResultProcessor, SearchEngineConfig
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,8 @@ class DataCollector:
             'phone_numbers': [],
             'addresses': [],
             'sources': [],
+            'search_results': [],
+            'search_statistics': {},
             'confidence_score': 0.0,
             'last_updated': datetime.utcnow().isoformat()
         }
@@ -81,6 +84,9 @@ class DataCollector:
                     logger.error(f"Error in collector {self.collectors[i].__class__.__name__}: {result}")
                 elif result:
                     self._merge_results(result)
+            
+            # Дополнительный поиск через поисковые системы
+            await self._search_engine_collection()
             
             # Дополнительный поиск по найденным данным
             await self._enhanced_search()
@@ -140,6 +146,126 @@ class DataCollector:
             for source in data['sources']:
                 if source not in self.results['sources']:
                     self.results['sources'].append(source)
+    
+    async def _search_engine_collection(self):
+        """Сбор данных через поисковые системы"""
+        logger.info(f"Starting search engine collection for {self.email}")
+        
+        try:
+            # Создаем конфигурацию для поиска
+            search_config = SearchEngineConfig(
+                max_results=10,
+                timeout=30,
+                delay_between_requests=2.0
+            )
+            
+            async with SearchEngineManager(search_config) as search_manager:
+                # Выполняем комплексный поиск
+                search_data = await search_manager.comprehensive_email_search(self.email)
+                
+                # Сохраняем результаты поиска
+                self.results['search_results'] = [
+                    {
+                        'title': result.title,
+                        'url': result.url,
+                        'snippet': result.snippet,
+                        'source': result.source,
+                        'rank': result.rank,
+                        'relevance_score': result.relevance_score
+                    }
+                    for result in search_data['search_results']
+                ]
+                
+                self.results['search_statistics'] = search_data['statistics']
+                
+                # Добавляем поисковые системы как источники
+                search_engines = search_data['statistics'].get('search_engines_used', [])
+                for engine in search_engines:
+                    if engine not in self.results['sources']:
+                        self.results['sources'].append(f"Search-{engine.title()}")
+                
+                # Обработка найденных URL через веб-скрапер
+                await self._process_search_results(search_data['search_results'])
+                
+                logger.info(f"Found {len(search_data['search_results'])} relevant results from search engines")
+                
+        except Exception as e:
+            logger.error(f"Error in search engine collection: {e}")
+    
+    async def _process_search_results(self, search_results):
+        """Обработка результатов поиска через веб-скрапер"""
+        if not search_results:
+            return
+            
+        try:
+            # Создаем обработчик результатов поиска
+            async with SearchResultProcessor() as processor:
+                processed_results = await processor.process_search_results(search_results)
+                
+                # Извлекаем дополнительную информацию со страниц
+                for result in processed_results:
+                    extracted_data = result.extracted_data
+                    
+                    if extracted_data:
+                        # Добавляем найденные email адреса
+                        for email in extracted_data.get('emails', []):
+                            if email != self.email and email not in self.results['phone_numbers']:
+                                # Можно добавить связанные email в отдельное поле
+                                pass
+                        
+                        # Добавляем социальные ссылки
+                        for social_link in extracted_data.get('social_links', []):
+                            social_profile = {
+                                'platform': social_link['platform'],
+                                'url': social_link['url'],
+                                'username': self._extract_username_from_url(social_link['url']),
+                                'verified': False,
+                                'source': 'search_engine'
+                            }
+                            
+                            # Проверяем, что профиль еще не добавлен
+                            if not any(p['url'] == social_profile['url'] for p in self.results['social_profiles']):
+                                self.results['social_profiles'].append(social_profile)
+                        
+                        # Добавляем найденные телефоны
+                        for phone in extracted_data.get('contact_info', {}).get('phones', []):
+                            cleaned_phone = self._clean_phone_number(phone)
+                            if cleaned_phone and cleaned_phone not in self.results['phone_numbers']:
+                                self.results['phone_numbers'].append(cleaned_phone)
+                        
+                        # Добавляем URL как веб-сайт
+                        if result.url not in self.results['websites']:
+                            self.results['websites'].append(result.url)
+                            
+        except Exception as e:
+            logger.error(f"Error processing search results: {e}")
+    
+    def _extract_username_from_url(self, url: str) -> str:
+        """Извлечение имени пользователя из URL социальной сети"""
+        try:
+            # Простое извлечение имени пользователя из URL
+            if 'linkedin.com/in/' in url:
+                return url.split('/in/')[-1].split('/')[0]
+            elif 'twitter.com/' in url or 'x.com/' in url:
+                return url.split('/')[-1].split('?')[0]
+            elif 'facebook.com/' in url:
+                return url.split('/')[-1].split('?')[0]
+            elif 'github.com/' in url:
+                return url.split('/')[-1].split('?')[0]
+            else:
+                return url.split('/')[-1].split('?')[0]
+        except:
+            return ''
+    
+    def _clean_phone_number(self, phone: str) -> Optional[str]:
+        """Очистка и валидация номера телефона"""
+        # Удаляем все символы кроме цифр и +
+        cleaned = re.sub(r'[^\d+]', '', phone)
+        
+        # Проверяем минимальную длину
+        if len(cleaned) >= 10:
+            return cleaned
+        return None
     
     async def _enhanced_search(self):
         """Дополнительный поиск на основе найденных данных"""

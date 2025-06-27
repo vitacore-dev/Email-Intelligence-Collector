@@ -13,6 +13,7 @@ import { Progress } from './components/ui/progress';
 import { Alert, AlertDescription } from './components/ui/alert';
 import ProfileDetails from './components/ProfileDetails';
 import BulkSearchResults from './components/BulkSearchResults';
+import SearchEngineStats from './components/SearchEngineStats';
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -213,7 +214,7 @@ function App() {
         </div>
 
         <Tabs defaultValue="single" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="single" className="flex items-center gap-2">
               <Search className="h-4 w-4" />
               Одиночный поиск
@@ -225,6 +226,10 @@ function App() {
             <TabsTrigger value="stats" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Статистика
+            </TabsTrigger>
+            <TabsTrigger value="search-engines" className="flex items-center gap-2">
+              <Search className="h-4 w-4" />
+              Поисковые системы
             </TabsTrigger>
           </TabsList>
 
@@ -344,7 +349,7 @@ function App() {
             {stats && !stats.error ? (
               <>
                 {/* Overview Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-sm font-medium">Всего профилей</CardTitle>
@@ -367,6 +372,19 @@ function App() {
                   
                   <Card>
                     <CardHeader>
+                      <CardTitle className="text-sm font-medium flex items-center gap-1">
+                        <Search className="h-3 w-3" />
+                        Поисковые результаты
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{stats.search_engine_results || 0}</div>
+                      <p className="text-xs text-muted-foreground">найдено через поисковики</p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader>
                       <CardTitle className="text-sm font-medium">Последние поиски</CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -375,6 +393,51 @@ function App() {
                     </CardContent>
                   </Card>
                 </div>
+                
+                {/* Search Engine Statistics */}
+                {stats.search_engine_stats && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Search className="h-4 w-4" />
+                        Статистика поисковых систем
+                      </CardTitle>
+                      <CardDescription>
+                        Эффективность различных поисковых систем
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {Object.entries(stats.search_engine_stats).map(([engine, data]) => (
+                          <div key={engine} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Badge variant="outline">{engine}</Badge>
+                              <span className="text-sm text-muted-foreground">
+                                {data.success_rate ? `${Math.round(data.success_rate * 100)}%` : 'N/A'}
+                              </span>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-sm">
+                                <span>Результатов:</span>
+                                <span className="font-medium">{data.total_results || 0}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span>Использований:</span>
+                                <span className="font-medium">{data.usage_count || 0}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span>Среднее время:</span>
+                                <span className="font-medium">
+                                  {data.avg_response_time ? `${data.avg_response_time.toFixed(2)}с` : 'N/A'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
                 
                 {/* Recent Searches */}
                 {stats.recent_searches && stats.recent_searches.length > 0 && (
@@ -409,6 +472,44 @@ function App() {
                   <CardTitle>Статистика системы</CardTitle>
                   <CardDescription>
                     Общая информация о работе системы
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingStats ? (
+                    <div className="text-center text-muted-foreground">
+                      Загрузка статистики...
+                    </div>
+                  ) : stats?.error ? (
+                    <Alert>
+                      <AlertDescription>{stats.error}</AlertDescription>
+                    </Alert>
+                  ) : (
+                    <div className="text-center text-muted-foreground">
+                      Статистика будет доступна после подключения к API
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Search Engines Tab */}
+          <TabsContent value="search-engines" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Детальная статистика поисковых систем</h2>
+              <Button onClick={loadStats} disabled={isLoadingStats}>
+                {isLoadingStats ? 'Обновление...' : 'Обновить'}
+              </Button>
+            </div>
+            
+            {stats && !stats.error ? (
+              <SearchEngineStats stats={stats} />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Статистика поисковых систем</CardTitle>
+                  <CardDescription>
+                    Детальный анализ работы поисковых систем
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

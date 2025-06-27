@@ -9,7 +9,7 @@ services:
     container_name: eic-backend
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       # Database
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-eic_db}
@@ -57,7 +57,7 @@ services:
       context: ./frontend
       target: production
       args:
-        - REACT_APP_API_URL=http://localhost:8000
+        - REACT_APP_API_URL=http://localhost:8001
     container_name: eic-frontend
     restart: unless-stopped
     ports:

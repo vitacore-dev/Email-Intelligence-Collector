@@ -20,12 +20,16 @@ services:
       - LINKEDIN_API_KEY=${LINKEDIN_API_KEY:-}
       - GITHUB_API_KEY=${GITHUB_API_KEY:-}
       # Настройки сбора данных
-      - MAX_CONCURRENT_REQUESTS=10
+      - MAX_CONCURRENT_REQUESTS=15
       - REQUEST_TIMEOUT=30
       - RETRY_ATTEMPTS=3
       - MAX_BULK_EMAILS=1000
-      - RATE_LIMIT_PER_MINUTE=60
+      - RATE_LIMIT_PER_MINUTE=100
       - SECRET_KEY=docker-secret-key-change-in-production
+      # Search Engine Settings
+      - SEARCH_ENGINE_TIMEOUT=30
+      - SEARCH_ENGINE_MAX_RESULTS=10
+      - SEARCH_ENGINE_DELAY=2.0
     volumes:
       # Постоянное хранение данных
       - eic_data:/app/data

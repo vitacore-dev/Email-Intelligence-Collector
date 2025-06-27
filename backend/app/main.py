@@ -167,9 +167,57 @@ async def get_stats(db: Session = Depends(get_db)):
             SearchHistory.created_at.desc()
         ).limit(10).all()
         
+        # Собираем статистику поисковых систем из профилей
+        search_engine_results = 0
+        search_engine_stats = {}
+        
+        profiles = db.query(EmailProfile).all()
+        for profile in profiles:
+            profile_data = profile.data if isinstance(profile.data, dict) else {}
+            
+            # Подсчет результатов поисковых систем
+            search_results = profile_data.get('search_results', [])
+            search_engine_results += len(search_results)
+            
+            # Анализ статистики по поисковым системам
+            search_stats = profile_data.get('search_statistics', {})
+            if search_stats:
+                engines_used = search_stats.get('search_engines_used', [])
+                processing_time = search_stats.get('processing_time', 0)
+                
+                for engine in engines_used:
+                    if engine not in search_engine_stats:
+                        search_engine_stats[engine] = {
+                            'name': engine,
+                            'total_results': 0,
+                            'usage_count': 0,
+                            'success_rate': 0.0,
+                            'avg_response_time': 0.0,
+                            'is_active': True,
+                            'response_times': []
+                        }
+                    
+                    # Подсчет результатов для каждой поисковой системы
+                    engine_results = [r for r in search_results if r.get('source', '').lower() == engine.lower()]
+                    search_engine_stats[engine]['total_results'] += len(engine_results)
+                    search_engine_stats[engine]['usage_count'] += 1
+                    
+                    if processing_time > 0:
+                        search_engine_stats[engine]['response_times'].append(processing_time)
+        
+        # Вычисляем средние значения
+        for engine, stats in search_engine_stats.items():
+            if stats['usage_count'] > 0:
+                stats['success_rate'] = min(1.0, stats['total_results'] / (stats['usage_count'] * 10))  # Примерная формула
+                if stats['response_times']:
+                    stats['avg_response_time'] = sum(stats['response_times']) / len(stats['response_times'])
+                del stats['response_times']  # Убираем временный массив
+        
         return StatsResponse(
             total_profiles=total_profiles,
             total_searches=total_searches,
+            search_engine_results=search_engine_results,
+            search_engine_stats=search_engine_stats,
             recent_searches=[search.to_dict() for search in recent_searches]
         )
         
