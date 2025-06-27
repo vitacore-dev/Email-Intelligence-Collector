@@ -1,41 +1,73 @@
-version: '3.8'
-
 services:
-  # Backend API Service (Simplified)
-  backend:
+  # Backend API Service
+  email-intelligence-collector:
     build:
-      context: ./backend
-      target: production
-    container_name: eic-backend-simple
-    restart: unless-stopped
+      context: .
+      dockerfile: Dockerfile
+    container_name: eic-app
     ports:
-      - "8000:8000"
+      - "8001:8000"  # Используем 8001 чтобы не конфликтовать с существующим сервисом
     environment:
-      # Use SQLite for simplicity
-      - DATABASE_URL=sqlite:///./data/eic_simple.sqlite
       - DEBUG=True
-      - SECRET_KEY=simple-dev-key-not-for-production
+      - DATABASE_URL=sqlite:///./data/eic_db.sqlite
+      - PORT=8000
+      - HOST=0.0.0.0
       - LOG_LEVEL=INFO
-      # Disable external services for simple setup
-      - ELASTICSEARCH_URL=
-      - REDIS_URL=
+      - PYTHONPATH=/app/backend
+      # API ключи (опционально)
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - TWITTER_API_KEY=${TWITTER_API_KEY:-}
+      - LINKEDIN_API_KEY=${LINKEDIN_API_KEY:-}
+      - GITHUB_API_KEY=${GITHUB_API_KEY:-}
+      # Настройки сбора данных
+      - MAX_CONCURRENT_REQUESTS=10
+      - REQUEST_TIMEOUT=30
+      - RETRY_ATTEMPTS=3
+      - MAX_BULK_EMAILS=1000
+      - RATE_LIMIT_PER_MINUTE=60
+      - SECRET_KEY=docker-secret-key-change-in-production
     volumes:
-      - ./backend/logs:/app/logs
-      - ./backend/data:/app/data
-    networks:
-      - eic-simple
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "2"
+      # Постоянное хранение данных
+      - eic_data:/app/data
+      - eic_logs:/app/backend/logs
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 40s
+    networks:
+      - eic-network
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      target: production
+      args:
+        - REACT_APP_API_URL=http://localhost:8001
+    container_name: eic-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - email-intelligence-collector
+    networks:
+      - eic-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  eic_data:
+    driver: local
+  eic_logs:
+    driver: local
 
 networks:
-  eic-simple:
+  eic-network:
     driver: bridge

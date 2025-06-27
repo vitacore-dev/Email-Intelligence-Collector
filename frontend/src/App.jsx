@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import { Search, Upload, User, BarChart3, Settings, Moon, Sun } from 'lucide-react';
 import { Button } from './components/ui/button';
@@ -11,6 +11,8 @@ import { Switch } from './components/ui/switch';
 import { Label } from './components/ui/label';
 import { Progress } from './components/ui/progress';
 import { Alert, AlertDescription } from './components/ui/alert';
+import ProfileDetails from './components/ProfileDetails';
+import BulkSearchResults from './components/BulkSearchResults';
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -20,6 +22,27 @@ function App() {
   const [bulkFile, setBulkFile] = useState(null);
   const [bulkResult, setBulkResult] = useState(null);
   const [forceRefresh, setForceRefresh] = useState(false);
+  const [stats, setStats] = useState(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
+
+  // Load statistics on component mount
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    setIsLoadingStats(true);
+    try {
+      const response = await fetch('http://localhost:8001/api/stats');
+      const data = await response.json();
+      setStats(data);
+    } catch (error) {
+      console.error('Stats loading error:', error);
+      setStats({ error: 'Не удалось загрузить статистику' });
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -32,7 +55,7 @@ function App() {
 
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/search', {
+      const response = await fetch('http://localhost:8001/api/search', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -45,6 +68,8 @@ function App() {
 
       const data = await response.json();
       setSearchResult(data);
+      // Refresh stats after successful search
+      loadStats();
     } catch (error) {
       console.error('Search error:', error);
       setSearchResult({
@@ -65,13 +90,15 @@ function App() {
 
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/bulk_search', {
+      const response = await fetch('http://localhost:8001/api/bulk_search', {
         method: 'POST',
         body: formData,
       });
 
       const data = await response.json();
       setBulkResult(data);
+      // Refresh stats after successful bulk search
+      loadStats();
     } catch (error) {
       console.error('Bulk search error:', error);
       setBulkResult({
@@ -252,7 +279,7 @@ function App() {
                       <AlertDescription>{searchResult.message}</AlertDescription>
                     </Alert>
                   ) : (
-                    renderProfileData(searchResult)
+                    <ProfileDetails data={searchResult} />
                   )}
                 </CardContent>
               </Card>
@@ -298,32 +325,7 @@ function App() {
                       <AlertDescription>{bulkResult.message}</AlertDescription>
                     </Alert>
                   ) : (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold">{bulkResult.total}</div>
-                          <div className="text-sm text-muted-foreground">Всего</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-600">{bulkResult.processed}</div>
-                          <div className="text-sm text-muted-foreground">Обработано</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-600">{bulkResult.existing}</div>
-                          <div className="text-sm text-muted-foreground">Из кэша</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-purple-600">{bulkResult.new}</div>
-                          <div className="text-sm text-muted-foreground">Новых</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-red-600">{bulkResult.invalid}</div>
-                          <div className="text-sm text-muted-foreground">Невалидных</div>
-                        </div>
-                      </div>
-                      
-                      <Progress value={(bulkResult.processed / bulkResult.total) * 100} />
-                    </div>
+                    <BulkSearchResults data={bulkResult} />
                   )}
                 </CardContent>
               </Card>
@@ -332,19 +334,100 @@ function App() {
 
           {/* Stats Tab */}
           <TabsContent value="stats" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Статистика системы</CardTitle>
-                <CardDescription>
-                  Общая информация о работе системы
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center text-muted-foreground">
-                  Статистика будет доступна после подключения к API
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Статистика системы</h2>
+              <Button onClick={loadStats} disabled={isLoadingStats}>
+                {isLoadingStats ? 'Обновление...' : 'Обновить'}
+              </Button>
+            </div>
+            
+            {stats && !stats.error ? (
+              <>
+                {/* Overview Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium">Всего профилей</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{stats.total_profiles}</div>
+                      <p className="text-xs text-muted-foreground">в базе данных</p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium">Всего поисков</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{stats.total_searches}</div>
+                      <p className="text-xs text-muted-foreground">выполнено запросов</p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium">Последние поиски</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{stats.recent_searches?.length || 0}</div>
+                      <p className="text-xs text-muted-foreground">недавних запросов</p>
+                    </CardContent>
+                  </Card>
                 </div>
-              </CardContent>
-            </Card>
+                
+                {/* Recent Searches */}
+                {stats.recent_searches && stats.recent_searches.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Последние поиски</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {stats.recent_searches.map((search, index) => (
+                          <div key={search.id || index} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <Badge variant={search.search_type === 'single' ? 'default' : 'secondary'}>
+                                {search.search_type === 'single' ? 'Одиночный' : 'Массовый'}
+                              </Badge>
+                              <span className="font-medium">{search.email}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                              <span>{search.results_found} результатов</span>
+                              <span>{new Date(search.created_at).toLocaleString('ru-RU')}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Статистика системы</CardTitle>
+                  <CardDescription>
+                    Общая информация о работе системы
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingStats ? (
+                    <div className="text-center text-muted-foreground">
+                      Загрузка статистики...
+                    </div>
+                  ) : stats?.error ? (
+                    <Alert>
+                      <AlertDescription>{stats.error}</AlertDescription>
+                    </Alert>
+                  ) : (
+                    <div className="text-center text-muted-foreground">
+                      Статистика будет доступна после подключения к API
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>
