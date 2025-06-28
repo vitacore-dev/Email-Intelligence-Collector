@@ -1,41 +1,50 @@
-# Multi-stage build for production optimization
+# Multi-stage build for React app
 FROM node:18-alpine as builder
 
+# Set working directory
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY pnpm-lock.yaml ./
 
-# Install pnpm and dependencies
-RUN npm install -g pnpm && \
-    pnpm install --frozen-lockfile
+# Install dependencies
+RUN npm install
 
 # Copy source code
 COPY . .
 
-# Build arguments
-ARG REACT_APP_API_URL=http://localhost:8000
-ENV REACT_APP_API_URL=${REACT_APP_API_URL}
-
 # Build the application
-RUN pnpm run build
+RUN npm run build
 
-# Production stage with Nginx
+# Development stage
+FROM node:18-alpine as development
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Expose port for development
+EXPOSE 5173
+
+# Default command for development
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+
+# Production stage
 FROM nginx:alpine as production
 
-# Install curl for health checks
-RUN apk add --no-cache curl
-
-# Copy built application
+# Copy built files
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy custom nginx configuration
+# Copy nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost/ || exit 1
 
 # Expose port
 EXPOSE 80

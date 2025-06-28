@@ -17,6 +17,7 @@ from .social_collectors import (
 from .web_scraper import WebScraper
 from .email_validator import EmailValidator
 from .search_engines import SearchEngineManager, SearchResultProcessor, SearchEngineConfig
+from .pdf_analyzer import PDFAnalyzer
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -90,6 +91,9 @@ class DataCollector:
             
             # Дополнительный поиск по найденным данным
             await self._enhanced_search()
+            
+            # PDF анализ
+            await self._pdf_search_and_analysis()
             
             # Вычисление рейтинга достоверности
             self._calculate_confidence_score()
@@ -281,6 +285,69 @@ class DataCollector:
                     self._merge_results(enhanced_data)
             except Exception as e:
                 logger.error(f"Error in enhanced search: {e}")
+    
+    async def _pdf_search_and_analysis(self):
+        """Поиск и анализ PDF документов"""
+        logger.info(f"Starting PDF search and analysis for {self.email}")
+        
+        try:
+            async with PDFAnalyzer(self.session) as pdf_analyzer:
+                pdf_results = await pdf_analyzer.search_pdf_documents(self.email)
+                
+                if pdf_results:
+                    # Добавляем PDF результаты в основные данные
+                    self.results['pdf_documents'] = pdf_results
+                    
+                    # Обрабатываем найденную информацию из PDF
+                    await self._process_pdf_results(pdf_results)
+                    
+                    # Добавляем PDF источники
+                    pdf_sources = list(set([pdf.get('source', 'PDF') for pdf in pdf_results]))
+                    for source in pdf_sources:
+                        source_name = f"PDF-{source}"
+                        if source_name not in self.results['sources']:
+                            self.results['sources'].append(source_name)
+                    
+                    logger.info(f"Found {len(pdf_results)} PDF documents for {self.email}")
+                else:
+                    logger.info(f"No PDF documents found for {self.email}")
+                    
+        except Exception as e:
+            logger.error(f"Error in PDF search and analysis: {e}")
+    
+    async def _process_pdf_results(self, pdf_results: List[Dict[str, Any]]):
+        """Обработка результатов PDF анализа"""
+        for pdf_result in pdf_results:
+            # Добавляем авторов в персональную информацию
+            authors = pdf_result.get('authors', [])
+            if authors and not self.results['person_info'].get('name'):
+                # Берем первого автора как возможное имя
+                self.results['person_info']['name'] = authors[0]
+                self.results['person_info']['source'] = 'PDF document'
+            
+            # Добавляем учреждения
+            institutions = pdf_result.get('institutions', [])
+            if institutions:
+                # Можно добавить в отдельное поле или в person_info
+                if not self.results['person_info'].get('organization'):
+                    self.results['person_info']['organization'] = institutions[0]
+            
+            # Добавляем найденные email адреса
+            all_emails = pdf_result.get('all_emails', [])
+            for email in all_emails:
+                if email != self.email and email not in [p.get('email') for p in self.results.get('related_emails', [])]:
+                    if 'related_emails' not in self.results:
+                        self.results['related_emails'] = []
+                    self.results['related_emails'].append({
+                        'email': email,
+                        'source': f"PDF: {pdf_result.get('title', 'Unknown')}",
+                        'confidence': pdf_result.get('confidence_score', 0.0)
+                    })
+            
+            # Добавляем URL PDF как веб-сайт
+            pdf_url = pdf_result.get('url')
+            if pdf_url and pdf_url not in self.results['websites']:
+                self.results['websites'].append(pdf_url)
     
     def _calculate_confidence_score(self):
         """Вычисление рейтинга достоверности данных"""

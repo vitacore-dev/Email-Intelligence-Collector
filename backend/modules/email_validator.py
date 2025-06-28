@@ -30,6 +30,11 @@ class EmailValidator:
         return bool(cls.EMAIL_REGEX.match(email))
     
     @classmethod
+    def validate_email(cls, email: str) -> Dict[str, any]:
+        """Основной метод валидации email (алиас для validate_comprehensive)"""
+        return cls.validate_comprehensive(email)
+    
+    @classmethod
     def validate_comprehensive(cls, email: str) -> Dict[str, any]:
         """Комплексная валидация email с проверкой домена"""
         result = {

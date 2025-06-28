@@ -39,7 +39,7 @@ services:
     container_name: eic-frontend-dev
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "5173:5173"
     environment:
       - REACT_APP_API_URL=http://localhost:8000
     volumes:
@@ -49,7 +49,7 @@ services:
       - backend
     networks:
       - eic-network
-    command: pnpm run dev --host
+    command: npm run dev -- --host 0.0.0.0 --port 5173
 
   # Redis Cache
   redis:

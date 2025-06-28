@@ -1,4 +1,4 @@
-# Email Intelligence Collector Docker Image
+# Email Intelligence Collector Docker Image - Comprehensive System
 FROM python:3.11-slim
 
 # Устанавливаем переменные окружения
@@ -6,7 +6,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/backend \
     PORT=8000 \
-    DEBUG=True
+    DEBUG=True \
+    MAX_PROCESSING_TIME=300 \
+    ENABLE_COMPREHENSIVE_ANALYSIS=True
 
 # Устанавливаем системные зависимости
 RUN apt-get update && apt-get install -y \

@@ -1,0 +1,248 @@
+version: '3.8'
+
+services:
+  # Backend API Service with Comprehensive Analysis
+  backend-comprehensive:
+    build:
+      context: ./backend
+      target: production
+      args:
+        - ENABLE_COMPREHENSIVE_ANALYSIS=True
+    container_name: eic-backend-comprehensive
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      # Database
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-eic_secure_password_2024}@db:5432/${POSTGRES_DB:-eic_db}
+      
+      # External Services
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - REDIS_URL=redis://redis:6379/0
+      
+      # API Keys (set in .env file)
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - GITHUB_API_KEY=${GITHUB_API_KEY:-}
+      - TWITTER_API_KEY=${TWITTER_API_KEY:-}
+      - LINKEDIN_API_KEY=${LINKEDIN_API_KEY:-}
+      
+      # Application Settings
+      - DEBUG=${DEBUG:-False}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this-in-production}
+      - MAX_CONCURRENT_REQUESTS=${MAX_CONCURRENT_REQUESTS:-10}
+      - RATE_LIMIT_PER_MINUTE=${RATE_LIMIT_PER_MINUTE:-60}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      
+      # Comprehensive Analysis Settings
+      - ENABLE_COMPREHENSIVE_ANALYSIS=${ENABLE_COMPREHENSIVE_ANALYSIS:-True}
+      - MAX_PROCESSING_TIME=${MAX_PROCESSING_TIME:-300}
+      - ENABLE_DEEP_SEARCH=${ENABLE_DEEP_SEARCH:-True}
+      - ENABLE_ACADEMIC_ANALYSIS=${ENABLE_ACADEMIC_ANALYSIS:-True}
+      - ENABLE_SOCIAL_ANALYSIS=${ENABLE_SOCIAL_ANALYSIS:-True}
+      - ENABLE_DIGITAL_TWIN=${ENABLE_DIGITAL_TWIN:-True}
+      - REQUEST_DELAY=${REQUEST_DELAY:-1.0}
+      - MAX_CONCURRENT_ANALYSIS_REQUESTS=${MAX_CONCURRENT_ANALYSIS_REQUESTS:-3}
+      - COMPREHENSIVE_ANALYSIS_CACHE_TTL=${COMPREHENSIVE_ANALYSIS_CACHE_TTL:-3600}
+      - AUTOMATIC_REPORT_GENERATION=${AUTOMATIC_REPORT_GENERATION:-True}
+      
+    volumes:
+      - ./backend/logs:/app/logs
+      - ./backend/data:/app/data
+      - ./backend/temp:/app/temp
+      - comprehensive_analysis_data:/app/analysis_data
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - eic-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Frontend Service with Comprehensive Analysis UI
+  frontend-comprehensive:
+    build:
+      context: ./frontend
+      target: production
+      args:
+        - REACT_APP_API_URL=http://localhost:8001
+        - REACT_APP_ENABLE_COMPREHENSIVE_ANALYSIS=true
+    container_name: eic-frontend-comprehensive
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    depends_on:
+      backend-comprehensive:
+        condition: service_healthy
+    networks:
+      - eic-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: eic-postgres-comprehensive
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-eic_db}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-eic_secure_password_2024}
+      - POSTGRES_INITDB_ARGS="--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_comprehensive_data:/var/lib/postgresql/data
+      - ./backend/database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5433:5432"
+    networks:
+      - eic-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-eic_db}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis Cache for Analysis Results
+  redis:
+    image: redis:7-alpine
+    container_name: eic-redis-comprehensive
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_comprehensive_data:/data
+    ports:
+      - "6380:6379"
+    networks:
+      - eic-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Elasticsearch for Advanced Search
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: eic-elasticsearch-comprehensive
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+    volumes:
+      - elasticsearch_comprehensive_data:/usr/share/elasticsearch/data
+    ports:
+      - "9201:9200"
+    networks:
+      - eic-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Analysis Worker for Background Processing
+  analysis-worker:
+    build:
+      context: ./backend
+      target: production
+    container_name: eic-analysis-worker
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-eic_secure_password_2024}@db:5432/${POSTGRES_DB:-eic_db}
+      - REDIS_URL=redis://redis:6379/0
+      - WORKER_MODE=true
+      - ENABLE_COMPREHENSIVE_ANALYSIS=True
+    volumes:
+      - ./backend/logs:/app/logs
+      - ./backend/data:/app/data
+      - comprehensive_analysis_data:/app/analysis_data
+    depends_on:
+      - db
+      - redis
+    networks:
+      - eic-network
+    command: ["celery", "-A", "app.celery_app", "worker", "--loglevel=info", "--concurrency=2"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Monitoring and Health Dashboard
+  monitoring:
+    image: nginx:alpine
+    container_name: eic-monitoring
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./monitoring/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./monitoring/dashboard:/usr/share/nginx/html:ro
+    depends_on:
+      - backend-comprehensive
+    networks:
+      - eic-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_comprehensive_data:
+    driver: local
+  elasticsearch_comprehensive_data:
+    driver: local
+  redis_comprehensive_data:
+    driver: local
+  comprehensive_analysis_data:
+    driver: local
+
+networks:
+  eic-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

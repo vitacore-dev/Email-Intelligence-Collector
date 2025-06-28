@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
     container_name: eic-app
     ports:
-      - "8001:8000"  # Используем 8001 чтобы не конфликтовать с существующим сервисом
+      - "8000:8000"  # Backend API на порту 8000
     environment:
       - DEBUG=True
       - DATABASE_URL=sqlite:///./data/eic_db.sqlite
@@ -50,10 +50,10 @@ services:
       context: ./frontend
       target: production
       args:
-        - REACT_APP_API_URL=http://localhost:8001
+        - REACT_APP_API_URL=http://localhost:8000
     container_name: eic-frontend
     ports:
-      - "3000:80"
+      - "5173:80"
     depends_on:
       - email-intelligence-collector
     networks:
