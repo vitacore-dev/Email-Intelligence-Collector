@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Intelligence Collector - Демонстрация</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .search-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        input[type="email"] {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            padding: 12px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .info-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            margin: 10px 0;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left-color: #dc3545;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border-left-color: #28a745;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-card {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .search-results {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            background: #f9f9f9;
+        }
+        .search-result-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 3px;
+            border-left: 3px solid #007bff;
+        }
+        .result-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .result-url {
+            color: #666;
+            font-size: 12px;
+            word-break: break-all;
+        }
+        .result-snippet {
+            color: #555;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🕵️‍♂️ Email Intelligence Collector</h1>
+        <p style="text-align: center; color: #666;">
+            Система для сбора и анализа информации из открытых источников интернета по email-адресу
+        </p>
+        
+        <div class="search-form">
+            <input type="email" id="emailInput" placeholder="Введите email адрес (например: buch1202@mail.ru)" value="buch1202@mail.ru">
+            <button onclick="searchEmail()" id="searchBtn">🔍 Анализировать</button>
+        </div>
+        
+        <div id="loading" class="loading" style="display: none;">
+            ⏳ Выполняется поиск и анализ данных... Это может занять несколько секунд.
+        </div>
+        
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8001';
+        
+        async function searchEmail() {
+            const email = document.getElementById('emailInput').value.trim();
+            const searchBtn = document.getElementById('searchBtn');
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            
+            if (!email) {
+                alert('Пожалуйста, введите email адрес');
+                return;
+            }
+            
+            // Валидация email
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                alert('Пожалуйста, введите корректный email адрес');
+                return;
+            }
+            
+            // UI состояние
+            searchBtn.disabled = true;
+            loading.style.display = 'block';
+            results.innerHTML = '';
+            
+            try {
+                // Комплексный анализ
+                const response = await fetch(`${API_BASE}/api/comprehensive-analysis`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        force_refresh: false
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                displayResults(data, email);
+                
+            } catch (error) {
+                console.error('Ошибка:', error);
+                results.innerHTML = `
+                    <div class="info-section error">
+                        <strong>❌ Ошибка:</strong> ${error.message}
+                        <br><small>Убедитесь, что backend сервер запущен на localhost:8001</small>
+                    </div>
+                `;
+            } finally {
+                searchBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+        
+        function displayResults(data, email) {
+            const results = document.getElementById('results');
+            
+            if (data.status === 'success') {
+                const resultData = data.data;
+                
+                results.innerHTML = `
+                    <div class="info-section success">
+                        <strong>✅ Анализ завершен!</strong> Найдена информация по адресу: ${email}
+                    </div>
+                    
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-value">${resultData.search_results ? resultData.search_results.length : 0}</div>
+                            <div class="stat-label">Результатов поиска</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${resultData.sources ? resultData.sources.length : 0}</div>
+                            <div class="stat-label">Источников данных</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${resultData.social_profiles ? resultData.social_profiles.length : 0}</div>
+                            <div class="stat-label">Соц. сетей</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${(resultData.confidence_score * 100).toFixed(0)}%</div>
+                            <div class="stat-label">Достоверность</div>
+                        </div>
+                    </div>
+                    
+                    ${resultData.search_results && resultData.search_results.length > 0 ? `
+                        <div class="info-section">
+                            <strong>🔍 Результаты поиска:</strong>
+                            <div class="search-results">
+                                ${resultData.search_results.slice(0, 10).map(result => `
+                                    <div class="search-result-item">
+                                        <div class="result-title">${result.title || 'Без заголовка'}</div>
+                                        <div class="result-url">${result.url}</div>
+                                        ${result.snippet ? `<div class="result-snippet">${result.snippet}</div>` : ''}
+                                        <small>Источник: ${result.source} | Релевантность: ${result.relevance_score || 'N/A'}</small>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${resultData.sources && resultData.sources.length > 0 ? `
+                        <div class="info-section">
+                            <strong>📊 Использованные источники:</strong>
+                            <p>${resultData.sources.join(', ')}</p>
+                        </div>
+                    ` : ''}
+                    
+                    ${resultData.search_statistics ? `
+                        <div class="info-section">
+                            <strong>📈 Статистика поиска:</strong>
+                            <ul>
+                                <li>Всего запросов: ${resultData.search_statistics.total_queries || 0}</li>
+                                <li>Успешных запросов: ${resultData.search_statistics.successful_queries || 0}</li>
+                                <li>Уникальных URL: ${resultData.search_statistics.unique_urls || 0}</li>
+                                <li>Время выполнения: ${resultData.search_statistics.start_time && resultData.search_statistics.end_time ? 
+                                    ((new Date(resultData.search_statistics.end_time) - new Date(resultData.search_statistics.start_time)) / 1000).toFixed(2) + ' сек' : 'N/A'}</li>
+                            </ul>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="info-section">
+                        <strong>⏰ Время обновления:</strong> ${resultData.last_updated ? new Date(resultData.last_updated).toLocaleString('ru-RU') : 'N/A'}
+                    </div>
+                `;
+            } else {
+                results.innerHTML = `
+                    <div class="info-section error">
+                        <strong>❌ Ошибка анализа</strong>
+                        <p>Не удалось выполнить анализ для адреса: ${email}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Поиск по Enter
+        document.getElementById('emailInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchEmail();
+            }
+        });
+        
+        // Проверка доступности API при загрузке
+        async function checkAPIHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                if (data.status === 'healthy') {
+                    console.log('✅ API сервер доступен');
+                } else {
+                    console.warn('⚠️ API сервер работает, но статус:', data.status);
+                }
+            } catch (error) {
+                console.error('❌ API сервер недоступен:', error);
+                document.getElementById('results').innerHTML = `
+                    <div class="info-section error">
+                        <strong>❌ Сервер недоступен</strong>
+                        <p>Не удается подключиться к API серверу на localhost:8001</p>
+                        <p><small>Убедитесь, что backend запущен командой: docker compose -f docker-compose.simple.yml up -d</small></p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Проверяем API при загрузке страницы
+        window.addEventListener('load', checkAPIHealth);
+    </script>
+</body>
+</html>

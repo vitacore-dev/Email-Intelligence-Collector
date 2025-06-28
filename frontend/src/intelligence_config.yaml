@@ -1,0 +1,171 @@
+# Email Intelligence Collection Configuration
+
+# General Settings
+general:
+  output_directory: "/tmp/email_intelligence"
+  log_level: "INFO"
+  max_concurrent_requests: 5
+  request_timeout: 30
+  rate_limit_delay: 1  # seconds between requests
+
+# Search Engine Configuration
+search_engines:
+  enabled: true
+  engines:
+    - name: "google"
+      url: "https://www.google.com/search?q=\"{email}\""
+      priority: 1
+      enabled: true
+    - name: "bing"
+      url: "https://www.bing.com/search?q=\"{email}\""
+      priority: 2
+      enabled: true
+    - name: "duckduckgo"
+      url: "https://duckduckgo.com/?q=\"{email}\""
+      priority: 3
+      enabled: true
+    - name: "yandex"
+      url: "https://yandex.ru/search/?text={email}"
+      priority: 4
+      enabled: true
+    - name: "baidu"
+      url: "https://www.baidu.com/s?wd={email}"
+      priority: 5
+      enabled: false
+
+# PDF Document Search
+pdf_search:
+  enabled: true
+  max_pdfs_per_source: 5
+  max_pdf_size: 50  # MB
+  engines:
+    - name: "google_scholar"
+      url: "https://scholar.google.com/scholar?q=\"{email}\""
+      priority: 1
+      enabled: true
+    - name: "google_pdf"
+      url: "https://www.google.com/search?q=\"{email}\"+filetype:pdf"
+      priority: 2
+      enabled: true
+    - name: "bing_pdf"
+      url: "https://www.bing.com/search?q=\"{email}\"+filetype:pdf"
+      priority: 3
+      enabled: true
+
+# Document Repositories
+document_repositories:
+  enabled: true
+  repositories:
+    - name: "academia"
+      url: "https://www.academia.edu/search?q={email}"
+      priority: 1
+      enabled: true
+    - name: "researchgate"
+      url: "https://www.researchgate.net/search?q={email}"
+      priority: 2
+      enabled: true
+    - name: "arxiv"
+      url: "https://arxiv.org/search/?query={email}&searchtype=all"
+      priority: 3
+      enabled: true
+    - name: "scribd"
+      url: "https://www.scribd.com/search?query={email}"
+      priority: 4
+      enabled: false
+    - name: "slideshare"
+      url: "https://www.slideshare.net/search/slideshow?searchfrom=header&q={email}"
+      priority: 5
+      enabled: false
+
+# Social Media Platforms
+social_media:
+  enabled: true
+  platforms:
+    - name: "linkedin"
+      url: "https://www.linkedin.com/search/results/people/?keywords={email}"
+      priority: 1
+      enabled: true
+    - name: "github"
+      url: "https://github.com/search?q={email}&type=users"
+      priority: 2
+      enabled: true
+    - name: "twitter"
+      url: "https://twitter.com/search?q={email}"
+      priority: 3
+      enabled: false  # Often requires authentication
+    - name: "facebook"
+      url: "https://www.facebook.com/search/people/?q={email}"
+      priority: 4
+      enabled: false  # Often requires authentication
+
+# Data Extraction Rules
+extraction:
+  # Name extraction patterns
+  name_patterns:
+    russian:
+      - "[А-ЯЁ][а-яё]+\\s+[А-ЯЁ]\\.?\\s*[А-ЯЁ]\\.?\\s*[А-ЯЁ][а-яё]+"
+      - "[А-ЯЁ]\\.?\\s*[А-ЯЁ]\\.?\\s*[А-ЯЁ][а-яё]+"
+    english:
+      - "[A-Z][a-z]+\\s+[A-Z]\\.?\\s*[A-Z]\\.?\\s*[A-Z][a-z]+"
+      - "[A-Z]\\.?\\s*[A-Z]\\.?\\s*[A-Z][a-z]+"
+  
+  # Institution patterns
+  institution_patterns:
+    - "[А-ЯЁ][а-яё]*\\s+[а-яё]*\\s*[Уу]ниверситет"
+    - "[А-ЯЁ][а-яё]*\\s+[а-яё]*\\s*[Ии]нститут"
+    - "[А-ЯЁ][а-яё]*\\s+[а-яё]*\\s*[Цц]ентр"
+    - "[А-ЯЁ][а-яё]*\\s+[а-яё]*\\s*[Кк]линика"
+    - "[А-ЯЁ][а-яё]*\\s+[а-яё]*\\s*[Аа]кадеми[яи]"
+  
+  # Contact patterns
+  email_pattern: "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b"
+  phone_patterns:
+    - "\\+\\d{1,3}\\s*\\(\\d{3}\\)\\s*\\d{3}-\\d{2}-\\d{2}"
+    - "\\+\\d{1,3}\\s*\\d{3}\\s*\\d{3}\\s*\\d{2}\\s*\\d{2}"
+    - "\\(\\d{3}\\)\\s*\\d{3}-\\d{4}"
+  
+  # Academic identifiers
+  orcid_pattern: "orcid\\.org/(\\d{4}-\\d{4}-\\d{4}-\\d{3}[\\dX])"
+
+# Confidence Scoring
+confidence_scoring:
+  weights:
+    basic_email_format: 0.1
+    full_name_found: 0.3
+    organization_found: 0.2
+    alternative_emails: 0.1
+    pdf_documents: 0.2
+    orcid_verification: 0.1
+  
+  thresholds:
+    low_confidence: 0.3
+    medium_confidence: 0.6
+    high_confidence: 0.8
+
+# Output Format
+output:
+  formats:
+    - "json"
+    - "markdown"
+    - "csv"
+  include_raw_data: false
+  include_screenshots: false
+  
+# Security and Privacy
+security:
+  respect_robots_txt: true
+  user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+  proxy_enabled: false
+  proxy_url: ""
+  
+# Cache Settings
+cache:
+  enabled: true
+  cache_directory: "/tmp/email_intelligence_cache"
+  cache_expiry: 24  # hours
+  
+# Notification Settings
+notifications:
+  enabled: false
+  webhook_url: ""
+  email_notifications: false

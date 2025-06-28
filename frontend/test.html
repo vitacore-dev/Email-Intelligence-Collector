@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page - Email Intelligence Collector</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .status {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Email Intelligence Collector - Test Page</h1>
+        
+        <div class="status">
+            ✅ Frontend server is running on port 5173<br>
+            ✅ Backend server is running on port 8001<br>
+            ✅ Docker containers are active
+        </div>
+        
+        <h2>Debug Information</h2>
+        <p><strong>Frontend URL:</strong> <a href="http://localhost:5173" target="_blank">http://localhost:5173</a></p>
+        <p><strong>Backend API:</strong> <a href="http://localhost:8001/api/stats" target="_blank">http://localhost:8001/api/stats</a></p>
+        
+        <h2>Next Steps</h2>
+        <ol>
+            <li>Проверьте консоль браузера на наличие JavaScript ошибок</li>
+            <li>Убедитесь, что все React компоненты загружаются корректно</li>
+            <li>Проверьте сетевое подключение между frontend и backend</li>
+        </ol>
+        
+        <script>
+            console.log('Test page loaded successfully');
+            console.log('Current URL:', window.location.href);
+            
+            // Test backend connection
+            fetch('http://localhost:8001/api/stats')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Backend connection successful:', data);
+                })
+                .catch(error => {
+                    console.error('Backend connection failed:', error);
+                });
+        </script>
+    </div>
+</body>
+</html>

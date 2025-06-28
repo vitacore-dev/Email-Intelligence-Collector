@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Connection Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5; 
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+        }
+        .test-item {
+            margin: 15px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .success { background-color: #e6ffe6; border-color: #99ff99; }
+        .error { background-color: #ffe6e6; border-color: #ff9999; }
+        .pending { background-color: #fff3cd; border-color: #ffeaa7; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        pre {
+            white-space: pre-wrap;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>API Connection Test</h1>
+        <p>Тестирование соединения между Frontend (порт 5173) и Backend (порт 8001)</p>
+        
+        <div id="tests">
+            <div class="test-item pending" id="test-health">
+                <h3>1. Health Check</h3>
+                <button onclick="testHealth()">Test /health</button>
+                <div id="result-health"></div>
+            </div>
+            
+            <div class="test-item pending" id="test-stats">
+                <h3>2. Stats API</h3>
+                <button onclick="testStats()">Test /api/stats</button>
+                <div id="result-stats"></div>
+            </div>
+            
+            <div class="test-item pending" id="test-search">
+                <h3>3. Search API</h3>
+                <button onclick="testSearch()">Test /api/search</button>
+                <div id="result-search"></div>
+            </div>
+            
+            <div class="test-item pending" id="test-cors">
+                <h3>4. CORS Test</h3>
+                <button onclick="testCORS()">Test CORS Headers</button>
+                <div id="result-cors"></div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <button onclick="runAllTests()">Run All Tests</button>
+            <button onclick="clearResults()">Clear Results</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8001';
+        
+        function updateTestResult(testId, success, message, data = null) {
+            const testDiv = document.getElementById(testId);
+            const resultDiv = document.getElementById(`result-${testId.replace('test-', '')}`);
+            
+            testDiv.className = `test-item ${success ? 'success' : 'error'}`;
+            resultDiv.innerHTML = `
+                <p><strong>${success ? '✅ SUCCESS' : '❌ ERROR'}:</strong> ${message}</p>
+                ${data ? `<pre>${JSON.stringify(data, null, 2)}</pre>` : ''}
+            `;
+        }
+        
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateTestResult('test-health', true, `Health check passed (${response.status})`, data);
+                } else {
+                    updateTestResult('test-health', false, `Health check failed (${response.status})`, data);
+                }
+            } catch (error) {
+                updateTestResult('test-health', false, `Network error: ${error.message}`);
+            }
+        }
+        
+        async function testStats() {
+            try {
+                const response = await fetch(`${API_BASE}/api/stats`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateTestResult('test-stats', true, `Stats API works (${response.status})`, data);
+                } else {
+                    updateTestResult('test-stats', false, `Stats API failed (${response.status})`, data);
+                }
+            } catch (error) {
+                updateTestResult('test-stats', false, `Network error: ${error.message}`);
+            }
+        }
+        
+        async function testSearch() {
+            try {
+                const response = await fetch(`${API_BASE}/api/search`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'test@example.com',
+                        force_refresh: false
+                    })
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateTestResult('test-search', true, `Search API works (${response.status})`, data);
+                } else {
+                    updateTestResult('test-search', false, `Search API failed (${response.status})`, data);
+                }
+            } catch (error) {
+                updateTestResult('test-search', false, `Network error: ${error.message}`);
+            }
+        }
+        
+        async function testCORS() {
+            try {
+                // Test preflight request
+                const response = await fetch(`${API_BASE}/api/stats`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Access-Control-Request-Method': 'GET',
+                        'Access-Control-Request-Headers': 'Content-Type',
+                        'Origin': 'http://localhost:5173'
+                    }
+                });
+                
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers'),
+                };
+                
+                if (response.ok) {
+                    updateTestResult('test-cors', true, `CORS headers present (${response.status})`, corsHeaders);
+                } else {
+                    updateTestResult('test-cors', false, `CORS preflight failed (${response.status})`, corsHeaders);
+                }
+            } catch (error) {
+                updateTestResult('test-cors', false, `CORS test error: ${error.message}`);
+            }
+        }
+        
+        async function runAllTests() {
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(btn => btn.disabled = true);
+            
+            try {
+                await testHealth();
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                await testStats();
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                await testSearch();
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                await testCORS();
+            } finally {
+                buttons.forEach(btn => btn.disabled = false);
+            }
+        }
+        
+        function clearResults() {
+            const testDivs = document.querySelectorAll('.test-item');
+            testDivs.forEach(div => {
+                div.className = 'test-item pending';
+            });
+            
+            const resultDivs = document.querySelectorAll('[id^="result-"]');
+            resultDivs.forEach(div => {
+                div.innerHTML = '';
+            });
+        }
+        
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            console.log('Page loaded, running initial tests...');
+            setTimeout(runAllTests, 1000);
+        });
+    </script>
+</body>
+</html>

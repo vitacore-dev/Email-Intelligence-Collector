@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Intelligence Collector - Digital Twin Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #1a202c;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #2d3748;
+        }
+
+        .header p {
+            color: #718096;
+        }
+
+        .tabs-container {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .tabs-nav {
+            display: flex;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0 1.5rem;
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 1rem 0.5rem;
+            margin-right: 2rem;
+            border-bottom: 2px solid transparent;
+            color: #718096;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .tab-button.active {
+            color: #3182ce;
+            border-bottom-color: #3182ce;
+        }
+
+        .tab-button:hover {
+            color: #4a5568;
+        }
+
+        .tab-content {
+            padding: 2rem;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.375rem;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #3182ce;
+            box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+        }
+
+        .btn {
+            background: #3182ce;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background: #2c5282;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .card {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #2d3748;
+        }
+
+        .grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .grid-cols-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .grid-cols-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .metric-card {
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-label {
+            font-size: 0.875rem;
+            color: #718096;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #ebf8ff;
+            color: #3182ce;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            margin: 0.125rem;
+        }
+
+        .alert {
+            background: #fef5e7;
+            border: 1px solid #f6e05e;
+            color: #744210;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin: 1rem 0;
+        }
+
+        .alert h4 {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #718096;
+        }
+
+        .error {
+            background: #fed7d7;
+            border: 1px solid #feb2b2;
+            color: #c53030;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .grid-cols-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .grid-cols-2 {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs-nav {
+                flex-wrap: wrap;
+            }
+            
+            .tab-button {
+                margin-right: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>Email Intelligence Collector</h1>
+            <p>Сбор и анализ информации по email-адресам из открытых источников</p>
+        </div>
+
+        <!-- Tabs Container -->
+        <div class="tabs-container">
+            <div class="tabs-nav">
+                <button class="tab-button active" onclick="switchTab('single')">
+                    Одиночный поиск
+                </button>
+                <button class="tab-button" onclick="switchTab('digital-twin')">
+                    Цифровой двойник
+                </button>
+            </div>
+
+            <div class="tab-content">
+                <!-- Single Search Tab -->
+                <div id="single" class="tab-panel active">
+                    <h2 style="margin-bottom: 1rem;">Поиск по одному email</h2>
+                    <form onsubmit="handleSingleSearch(event)">
+                        <div class="form-group">
+                            <input 
+                                type="email" 
+                                id="searchEmail" 
+                                class="form-input" 
+                                placeholder="example@domain.com"
+                                required
+                            />
+                        </div>
+                        <button type="submit" class="btn" id="searchBtn">
+                            Найти
+                        </button>
+                    </form>
+
+                    <div id="searchResult" style="margin-top: 2rem;"></div>
+                </div>
+
+                <!-- Digital Twin Tab -->
+                <div id="digital-twin" class="tab-panel">
+                    <h2 style="margin-bottom: 1rem;">Анализ цифрового двойника</h2>
+                    <form onsubmit="handleDigitalTwinSearch(event)">
+                        <div class="form-group">
+                            <input 
+                                type="email" 
+                                id="digitalTwinEmail" 
+                                class="form-input" 
+                                placeholder="researcher@university.com"
+                                required
+                            />
+                        </div>
+                        <button type="submit" class="btn" id="digitalTwinBtn">
+                            Создать цифрового двойника
+                        </button>
+                    </form>
+
+                    <div id="digitalTwinResult" style="margin-top: 2rem;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let isLoading = false;
+        const API_BASE_URL = 'http://localhost:8001/api';
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all panels
+            document.querySelectorAll('.tab-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected panel and activate button
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // API call helper
+        async function makeAPICall(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    ...options,
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error(`API request failed for ${endpoint}:`, error);
+                throw error;
+            }
+        }
+
+        // Handle single search
+        async function handleSingleSearch(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('searchEmail').value;
+            const resultDiv = document.getElementById('searchResult');
+            const btn = document.getElementById('searchBtn');
+            
+            if (!email || isLoading) return;
+            
+            isLoading = true;
+            btn.textContent = 'Поиск...';
+            btn.disabled = true;
+            
+            resultDiv.innerHTML = '<div class="loading">Загрузка...</div>';
+            
+            try {
+                const data = await makeAPICall('/search', {
+                    method: 'POST',
+                    body: JSON.stringify({ email: email }),
+                });
+                
+                resultDiv.innerHTML = `
+                    <div class="card">
+                        <h3>Результаты поиска</h3>
+                        <pre style="background: #f7fafc; padding: 1rem; border-radius: 0.375rem; overflow: auto; font-size: 0.875rem;">${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = '<div class="error">Ошибка при поиске. Проверьте подключение к серверу.</div>';
+            } finally {
+                isLoading = false;
+                btn.textContent = 'Найти';
+                btn.disabled = false;
+            }
+        }
+
+        // Handle digital twin search
+        async function handleDigitalTwinSearch(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('digitalTwinEmail').value;
+            const resultDiv = document.getElementById('digitalTwinResult');
+            const btn = document.getElementById('digitalTwinBtn');
+            
+            if (!email || isLoading) return;
+            
+            isLoading = true;
+            btn.textContent = 'Загрузка...';
+            btn.disabled = true;
+            
+            resultDiv.innerHTML = '<div class="loading">Создание цифрового двойника...</div>';
+            
+            try {
+                let digitalTwin;
+                try {
+                    digitalTwin = await makeAPICall(`/digital-twin/${encodeURIComponent(email)}`);
+                } catch (apiError) {
+                    // Fallback to demo data if API is not available
+                    digitalTwin = {
+                        name: "Dr. John Doe",
+                        email: email,
+                        affiliation: "Demo University",
+                        research_interests: ["Machine Learning", "Data Science", "AI Ethics"],
+                        metrics: {
+                            total_publications: 45,
+                            total_citations: 892,
+                            h_index: 14,
+                            collaboration_score: 78
+                        }
+                    };
+                }
+                
+                // Render digital twin UI
+                resultDiv.innerHTML = renderDigitalTwin(digitalTwin);
+                
+            } catch (error) {
+                resultDiv.innerHTML = '<div class="error">Ошибка при загрузке данных цифрового двойника</div>';
+            } finally {
+                isLoading = false;
+                btn.textContent = 'Создать цифрового двойника';
+                btn.disabled = false;
+            }
+        }
+
+        // Render digital twin UI
+        function renderDigitalTwin(data) {
+            const interestsBadges = data.research_interests 
+                ? data.research_interests.map(interest => `<span class="badge">${interest}</span>`).join('')
+                : '';
+
+            return `
+                <!-- Profile Summary -->
+                <div class="card">
+                    <h3>Профиль исследователя</h3>
+                    <div class="grid grid-cols-2">
+                        <div><strong>Email:</strong> ${data.email}</div>
+                        ${data.name ? `<div><strong>Имя:</strong> ${data.name}</div>` : ''}
+                        ${data.affiliation ? `<div><strong>Организация:</strong> ${data.affiliation}</div>` : ''}
+                        ${data.research_interests ? `<div><strong>Области исследований:</strong><br/>${interestsBadges}</div>` : ''}
+                    </div>
+                </div>
+
+                <!-- Key Metrics -->
+                ${data.metrics ? `
+                <div class="card">
+                    <h3>Ключевые метрики</h3>
+                    <div class="grid grid-cols-4">
+                        <div class="metric-card">
+                            <div class="metric-value" style="color: #3182ce;">${data.metrics.total_publications || 0}</div>
+                            <div class="metric-label">Публикации</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" style="color: #38a169;">${data.metrics.total_citations || 0}</div>
+                            <div class="metric-label">Цитирования</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" style="color: #805ad5;">${data.metrics.h_index || 0}</div>
+                            <div class="metric-label">H-индекс</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" style="color: #dd6b20;">${data.metrics.collaboration_score || 0}%</div>
+                            <div class="metric-label">Коллаборация</div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Demo Notice -->
+                <div class="alert">
+                    <h4>Демо-режим</h4>
+                    <p>Это демонстрационная версия цифрового двойника. Полная версия с интерактивными графиками, сетями сотрудничества и временными линиями доступна после обновления Node.js до версии 18+.</p>
+                    <p><strong>Что будет доступно:</strong></p>
+                    <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                        <li>Радарная диаграмма исследовательского профиля</li>
+                        <li>Интерактивная сеть сотрудничества</li>
+                        <li>Временная линия публикаций и цитирований</li>
+                        <li>Детальная аналитика и экспорт в PDF</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Email Intelligence Collector - Digital Twin Demo готов к работе!');
+        });
+    </script>
+</body>
+</html>

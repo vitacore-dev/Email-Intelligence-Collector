@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  # Frontend Service (Development)
+  frontend:
+    build:
+      context: ./frontend
+      target: builder
+    container_name: eic-frontend-dev
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - eic-network
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+
+networks:
+  eic-network:
+    driver: bridge

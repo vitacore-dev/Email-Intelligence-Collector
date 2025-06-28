@@ -1,0 +1,55 @@
+# Email Intelligence Collection System Requirements
+
+# Core dependencies
+aiohttp>=3.8.0
+asyncio-throttle>=1.0.2
+PyYAML>=6.0
+
+# PDF processing
+PyPDF2>=3.0.0
+pdfplumber>=0.11.0
+pypdfium2>=4.18.0
+
+# Data processing
+dataclasses-json>=0.5.7
+python-dateutil>=2.8.2
+
+# Text processing and analysis
+beautifulsoup4>=4.11.0
+lxml>=4.9.0
+html5lib>=1.1
+
+# HTTP client enhancements
+requests>=2.28.0
+urllib3>=1.26.0
+httpx>=0.24.0
+
+# Data validation
+email-validator>=2.0.0
+validators>=0.20.0
+
+# Logging and monitoring
+structlog>=22.1.0
+python-json-logger>=2.0.4
+
+# Configuration
+pydantic>=1.10.0
+python-dotenv>=0.19.0
+
+# Optional: Advanced features
+# selenium>=4.8.0          # For JavaScript-heavy sites
+# undetected-chromedriver  # For anti-bot protection
+# tor-python-easy         # For anonymity
+# fake-useragent          # For user agent rotation
+
+# Development dependencies (optional)
+pytest>=7.1.0
+pytest-asyncio>=0.21.0
+black>=22.3.0
+isort>=5.10.0
+mypy>=0.950
+
+# Visualization (optional)
+matplotlib>=3.5.0
+seaborn>=0.11.0
+plotly>=5.8.0

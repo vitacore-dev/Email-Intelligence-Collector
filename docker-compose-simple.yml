@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build: .
+    image: eic-backend:latest
+    container_name: eic-app
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./data:/app/data
+      - ./backend/logs:/app/backend/logs
+    environment:
+      - PYTHONPATH=/app/backend
+      - ENVIRONMENT=development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - eic-network
+
+  # Frontend Service  
+  frontend:
+    build: ./frontend
+    image: eic-frontend:latest
+    container_name: eic-frontend-dev
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=http://localhost:8001/api
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - eic-network
+
+networks:
+  eic-network:
+    driver: bridge
+
+volumes:
+  eic-data:
+    driver: local
+  eic-logs:
+    driver: local
